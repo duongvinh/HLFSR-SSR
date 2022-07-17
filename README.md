@@ -42,6 +42,14 @@ If you find this work helpful, please consider citing the following papers:<br>
 }
 ```
 ```Citation
+@InProceedings{LF-InterNet,
+  author    = {Wang, Yingqian and Wang, Longguang and Yang, Jungang and An, Wei and Yu, Jingyi and Guo, Yulan},
+  title     = {Spatial-Angular Interaction for Light Field Image Super-Resolution},
+  booktitle = {European Conference on Computer Vision (ECCV)},
+  pages     = {290-308},
+  year      = {2020},
+}
+
 @article{LF-DFnet,
   author  = {Wang, Yingqian and Yang, Jungang and Wang, Longguang and Ying, Xinyi and Wu, Tianhao and An, Wei and Guo, Yulan},
   title   = {Light Field Image Super-Resolution Using Deformable Convolution},
