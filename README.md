@@ -50,17 +50,8 @@ If you find this work helpful, please consider citing the following papers:<br>
   year      = {2020},
 }
 
-@article{LF-DFnet,
-  author  = {Wang, Yingqian and Yang, Jungang and Wang, Longguang and Ying, Xinyi and Wu, Tianhao and An, Wei and Guo, Yulan},
-  title   = {Light Field Image Super-Resolution Using Deformable Convolution},
-  journal = {IEEE Transactions on Image Processing},
-  volume  = {30),
-  pages   = {1057-1071},
-  year    = {2021},
-}
 ```
 ## Acknowledgement
 Our work and implementations are inspired and based on the following projects: <br> 
-[LF-DFnet](https://github.com/YingqianWang/LF-DFnet)<br> 
 [LF-InterNet](https://github.com/YingqianWang/LF-InterNet)<br> 
 We sincerely thank the authors for sharing their code and amazing research work!
