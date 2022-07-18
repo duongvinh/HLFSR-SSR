@@ -36,7 +36,7 @@ class HLFSR(nn.Module):
 		HFEM_2 = self.HFEM_2(HFEM_1)
 		HFEM_3 = self.HFEM_3(HFEM_2)
 		HFEM_4 = self.HFEM_4(HFEM_3)
-		HFEM_5 = self.HFEM_4(HFEM_4)
+		HFEM_5 = self.HFEM_5(HFEM_4)
 
 
 		#Reshaping
