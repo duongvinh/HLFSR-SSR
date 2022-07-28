@@ -163,11 +163,11 @@ class HFEM(nn.Module):
 		x_a_inter = self.ang2spa_inter(x_a_inter)
 
 		# fusion feature and refinement
-		out = x_epi.unsqueeze(1)
-		out = torch.cat([x_s_intra.unsqueeze(1),out],1)
+		out = x_s_intra.unsqueeze(1)
 		out = torch.cat([x_s_inter.unsqueeze(1),out],1)
 		out = torch.cat([x_a_intra.unsqueeze(1),out],1)
 		out = torch.cat([x_a_inter.unsqueeze(1),out],1)
+		out = torch.cat([x_epi.unsqueeze(1),out],1)
 
 		out,att_weight = self.attention_fusion(out)
 
