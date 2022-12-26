@@ -3,6 +3,7 @@ This repository contains official pytorch implementation of "Light Field Image S
 
 ## News
 [To-do-list]: we would like to integrate our model to [BasicLFSR](https://github.com/ZhengyuLiang24/BasicLFSR), where many SOTA methods have been implemented in a unified framework
+
 [2022-12-26]: we have updated the pre-trained models and codes.
 
 
