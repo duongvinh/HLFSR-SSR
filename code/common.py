@@ -128,54 +128,36 @@ def MacPI2SAI(x, angRes):
 	return out
 
 def MacPI2EPI(x, angRes):
-	# N,C,W,H = x.size()
 
-	train_data_0 = []
-	train_data_90 = []
-	train_data_45 = []
-	train_data_135 = []
+	data_0 = []
+	data_90 = []
+	data_45 = []
+	data_135 = []
 
 	index_center = int(angRes//2)
 	for i in range(0,angRes,1):
 		img_tmp = x[:,:,index_center::angRes,i::angRes]
-		train_data_0.append(img_tmp)
-	train_data_0 = torch.cat(train_data_0, 1)
+		data_0.append(img_tmp)
+	data_0 = torch.cat(data_0, 1)
 	
 	for i in range(0, angRes, 1):
 		img_tmp = x[:,:,i::angRes, index_center::angRes]
-		train_data_90.append(img_tmp)
-	train_data_90 = torch.cat(train_data_90, 1)
+		data_90.append(img_tmp)
+	data_90 = torch.cat(data_90, 1)
 
 	for i in range(0, angRes, 1):
 		img_tmp = x[:,:,i::angRes, i::angRes]
-		train_data_45.append(img_tmp)
-	train_data_45 = torch.cat(train_data_45, 1)
+		data_45.append(img_tmp)
+	data_45 = torch.cat(data_45, 1)
 
 	for i in range(0, angRes, 1):
 		img_tmp = x[:,:,i::angRes, angRes-i-1::angRes]
-		train_data_135.append(img_tmp)
-	train_data_135 = torch.cat(train_data_135, 1)
+		data_135.append(img_tmp)
+	data_135 = torch.cat(data_135, 1)
 
-	return train_data_0, train_data_90, train_data_45, train_data_135
+	return data_0, data_90, data_45, data_135
 
 
-def SAI24DLF(x, angRes):
-	
-	uh, vw = x.shape
-	h0, w0 = int(uh // angRes), int(vw // angRes)
-
-	LFout = torch.zeros(angRes, angRes, h0, w0)
-
-	for u in range(angRes):
-		start_u = u*h0
-		end_u = (u+1)*h0
-		for v in range(angRes):
-			start_v = v*w0
-			end_v = (v+1)*w0
-			img_tmp = x[start_u:end_u,start_v:end_v]
-			LFout[u, v, :, :] = img_tmp
-
-	return LFout
 
 def SAI2MacPI(x, angRes):
 	b, c, hu, wv = x.shape
