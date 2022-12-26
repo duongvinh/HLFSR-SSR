@@ -18,13 +18,15 @@ def parse_args():
 	parser.add_argument('--device', type=str, default='cuda:0')
 	parser.add_argument("--angRes", type=int, default=5, help="angular resolution")
 	parser.add_argument("--upscale_factor", type=int, default=4, help="upscale factor")
-	parser.add_argument("--channels", type=int, default=32, help="number of channels")
+	parser.add_argument("--channels", type=int, default=64, help="number of channels")
 	parser.add_argument('--testset_dir', type=str, default='../x4/TestData_4xSR_5x5/')
-	parser.add_argument("--crop_test_method",type=int, default=3, help="cropped test method( 1- whole image| 2- cropped mxn patches | 3- cropped 4 patches")
-	parser.add_argument("--patchsize", type=int, default=64, help="LFs are cropped into patches to save GPU memory")
-	parser.add_argument("--stride", type=int, default=32, help="The stride between two test patches is set to patchsize/2")
-	parser.add_argument('--model_path', type=str, default='./log/HLFSR_4xSR_5x5_C32.pth.tar')
+	parser.add_argument('--model_path', type=str, default='./log/HLFSR_4xSR_5x5_C64.pth.tar')
 	parser.add_argument('--save_path', type=str, default='../Results/')
+
+	parser.add_argument("--crop_test_method",type=int, default=3, help="cropped test method( 1- whole image| 2- cropped mxn patches | 3- cropped 4 patches")
+	parser.add_argument("--patchsize", type=int, default=64, help="LFs are cropped into patches to save GPU memory for copped method 2")
+	parser.add_argument("--stride", type=int, default=64, help="The stride between two test patches is set to patchsize/2")
+	
 
 	return parser.parse_args()
 
@@ -76,6 +78,7 @@ def inference(test_loader, test_name, net,angRes=5,n_GPUs=1):
 
 	for idx_iter, (data, label) in (enumerate(test_loader)):
 		time_test = 0
+
 		if cfg.crop_test_method == 1:
 			data = data.to(cfg.device)  # numU, numV, h*angRes, w*angRes
 			label = label.squeeze()
@@ -84,6 +87,9 @@ def inference(test_loader, test_name, net,angRes=5,n_GPUs=1):
 				outLF = net(data)
 				time_test += time.time() - time_item_start 
 			outLF = outLF.squeeze()
+			#covert SAI to 4DLF
+			outLF = SAI24DLF(outLF, cfg.angRes)
+			label = SAI24DLF(label, cfg.angRes)
 
 		if cfg.crop_test_method == 2:
 			data = MacPI2SAI(data,cfg.angRes)
@@ -152,6 +158,10 @@ def inference(test_loader, test_name, net,angRes=5,n_GPUs=1):
 
 			outLF = MacPI2SAI(outLF,angRes)
 			outLF = outLF.squeeze()
+
+			#covert SAI to 4DLF
+			outLF = SAI24DLF(outLF, cfg.angRes)
+			label = SAI24DLF(label, cfg.angRes)
 
 		psnr, ssim = cal_metrics(label, outLF, cfg.angRes)
 		psnr_iter_test.append(psnr)
