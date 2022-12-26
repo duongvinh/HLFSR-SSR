@@ -3,55 +3,53 @@ import argparse
 from torch.autograd import Variable
 import torch.backends.cudnn as cudnn
 from tqdm import tqdm
-from utils import *
-from common import * 
 import torch
 
-from model_HLFSR import HLFSR
+from common import *
+from readH5 import *
+from utils import *
+
+from model_HLFSR import Net
+
 
 # Settings
 def parse_args():
 	parser = argparse.ArgumentParser()
 	parser.add_argument('--device', type=str, default='cuda:0')
+	parser.add_argument('--parallel', type=bool, default=False)
+	parser.add_argument("--n_GPUs", type=int, default=2, help="number of GPUs")
 	parser.add_argument("--angRes", type=int, default=5, help="angular resolution")
+	parser.add_argument("--channels", type=int, default=32, help="number of channels")
 	parser.add_argument("--upscale_factor", type=int, default=4, help="upscale factor")
 	parser.add_argument('--model_name', type=str, default='HLFSR')
-	parser.add_argument('--trainset_dir', type=str, default='F:/1.Data/1.Vinh/2. Research/1. Research skku/5.LFSR/4.HLFSR/Data_HLFSR/x4/TrainingData_5x5_4xSR')
-	parser.add_argument('--testset_dir', type=str, default='F:/1.Data/1.Vinh/2. Research/1. Research skku/5.LFSR/4.HLFSR/Data_HLFSR/x4/TestData_4xSR_5x5_Small/')
+	parser.add_argument('--trainset_dir', type=str, default='../x4/TrainingData_5x5_4xSR')
+	parser.add_argument('--testset_dir', type=str, default='../x4/TestData_4xSR_5x5/')
 
-
-	parser.add_argument('--batch_size', type=int, default=2)
+	parser.add_argument('--batch_size', type=int, default=4)
 	parser.add_argument('--lr', type=float, default=2e-4, help='initial learning rate')
 	parser.add_argument('--n_epochs', type=int, default=50, help='number of epochs to train')
 	parser.add_argument('--n_steps', type=int, default=15, help='number of epochs to update learning rate')
 	parser.add_argument('--gamma', type=float, default=0.5, help='learning rate decaying factor')
 
+	parser.add_argument("--crop_test_method",type=int, default=2, help="cropped test method( 1- whole image| 2- cropped mxn patches | 3- cropped 4 patches")
 	parser.add_argument("--patchsize", type=int, default=64, help="crop into patches for validation")
 	parser.add_argument("--stride", type=int, default=32, help="stride for patch cropping")
 
 	parser.add_argument('--load_pretrain', type=bool, default=False)
 	parser.add_argument('--model_path', type=str, default='./log/HLFSR_4xSR_5x5_epoch_24.pth.tar')
-
-	parser.add_argument("--n_groups", type=int, default=5, help="number of HLFSR-Groups")
-	parser.add_argument("--n_blocks", type=int, default=15, help="number of HLFSR-Blocks")
-	parser.add_argument("--channels", type=int, default=64, help="number of channels")
-	parser.add_argument("--n_GPUs", type=int, default=2, help="number of GPUs")
-	parser.add_argument("--crop_test",type=bool, default=True)
+	
 
 	return parser.parse_args()
 
 
 def train(cfg, train_loader, test_Names, test_loaders):
-
-	net = HLFSR(angRes=cfg.angRes, n_blocks=cfg.n_blocks,
-				   channels=cfg.channels, upscale_factor=cfg.upscale_factor)
-	# net.apply(weights_init_xavier)
-
+	
+	net = Net(angRes=cfg.angRes, channels=cfg.channels, factor=cfg.upscale_factor) # HLFSR
+  
 	net.to(cfg.device)
 	cudnn.benchmark = True
 	epoch_state = 0
 
-	# print(net)
 	total_params = sum(p.numel() for p in net.parameters())
 	print("Total Params: {:.2f}".format(total_params)) 
 
@@ -63,7 +61,8 @@ def train(cfg, train_loader, test_Names, test_loaders):
 		else:
 			print("=> no model found at '{}'".format(cfg.load_model))
 
-	# net = torch.nn.DataParallel(net, device_ids=[0, 1])
+	if cfg.parallel:
+		net = torch.nn.DataParallel(net, device_ids=[0, 1])
 
 	criterion_Loss = torch.nn.L1Loss().to(cfg.device)
 	optimizer = torch.optim.Adam([paras for paras in net.parameters() if paras.requires_grad == True], lr=cfg.lr)
@@ -85,13 +84,21 @@ def train(cfg, train_loader, test_Names, test_loaders):
 		if idx_epoch % 1 == 0:
 			loss_list.append(float(np.array(loss_epoch).mean()))
 			print(time.ctime()[4:-5] + ' Epoch----%5d, loss---%f' % (idx_epoch + 1, float(np.array(loss_epoch).mean())))
-			save_ckpt({
+			if cfg.parallel:
+				save_ckpt({
 				'epoch': idx_epoch + 1,
-				'state_dict': net.state_dict(),
-				# 'state_dict': net.module.state_dict(),  # for torch.nn.DataParallel
+				'state_dict': net.module.state_dict(),  
 				'loss': loss_list,},
 				save_path='./log/', filename=cfg.model_name + '_' + str(cfg.upscale_factor) + 'xSR_' + str(cfg.angRes) +
 							'x' + str(cfg.angRes) + '_epoch_' + str(idx_epoch + 1) + '.pth.tar')
+			else:
+				save_ckpt({
+				'epoch': idx_epoch + 1,
+				'state_dict': net.state_dict(),  
+				'loss': loss_list,},
+				save_path='./log/', filename=cfg.model_name + '_' + str(cfg.upscale_factor) + 'xSR_' + str(cfg.angRes) +
+							'x' + str(cfg.angRes) + '_epoch_' + str(idx_epoch + 1) + '.pth.tar')
+							
 			loss_epoch = []
 
 		''' evaluation '''
@@ -111,15 +118,46 @@ def train(cfg, train_loader, test_Names, test_loaders):
 		pass
 
 
-def valid(test_loader, net, angRes=5,n_GPUs=2):
+def valid(test_loader, net, angRes=5,n_GPUs=1):
 	psnr_iter_test = []
 	ssim_iter_test = []
-	for idx_iter, (data, label) in (enumerate(test_loader)):
-		data = data.to(cfg.device)  # numU, numV, h*angRes, w*angRes
-		label = label.squeeze()
 
-		b, c, h, w = data.size()
-		if cfg.crop_test:
+	for idx_iter, (data, label) in (enumerate(test_loader)):
+	
+		if cfg.crop_test_method == 1:
+			data = data.to(cfg.device)  # numU, numV, h*angRes, w*angRes
+			label = label.squeeze()
+			with torch.no_grad():
+				outLF = net(data)
+			outLF = outLF.squeeze()
+
+		if cfg.crop_test_method == 2:
+			data = MacPI2SAI(data,cfg.angRes)
+			data = data.squeeze().to(cfg.device)  # numU, numV, h*angRes, w*angRes
+			label = label.squeeze()
+
+			uh, vw = data.shape
+			h0, w0 = uh // cfg.angRes, vw // cfg.angRes
+			subLFin = LFdivide(data, cfg.angRes, cfg.patchsize, cfg.stride)  # numU, numV, h*angRes, w*angRes
+			numU, numV, H, W = subLFin.shape
+			subLFout = torch.zeros(numU, numV, cfg.angRes * cfg.patchsize * cfg.upscale_factor, cfg.angRes * cfg.patchsize * cfg.upscale_factor)
+
+			for u in range(numU):
+				for v in range(numV):
+					tmp = subLFin[u, v, :, :].unsqueeze(0).unsqueeze(0)
+					tmp = SAI2MacPI(tmp,cfg.angRes)
+					with torch.no_grad():
+						torch.cuda.empty_cache()
+						out = net(tmp.to(cfg.device))
+						subLFout[u, v, :, :] = out.squeeze()
+
+			outLF = LFintegrate(subLFout, cfg.angRes, cfg.patchsize * cfg.upscale_factor, cfg.stride * cfg.upscale_factor, h0 * cfg.upscale_factor, w0 * cfg.upscale_factor)
+
+		if cfg.crop_test_method == 3:
+			data = data.to(cfg.device)  # numU, numV, h*angRes, w*angRes
+			label = label.squeeze()
+
+			b, c, h, w = data.size()
 			scale  = cfg.upscale_factor
 			h_half, w_half = h // 2, w // 2
 			h_size, w_size = h_half , w_half 
@@ -130,9 +168,8 @@ def valid(test_loader, net, angRes=5,n_GPUs=2):
 				data[:, :, (h - h_size):h, 0:w_size],
 				data[:, :, (h - h_size):h, (w - w_size):w]]
 
-
 			sr_list = []
-			# n_GPUs = 1
+			n_GPUs = 1
 			for i in range(0, 4, n_GPUs):
 				lr_batch = torch.cat(lr_list[i:(i + n_GPUs)], dim=0)
 				with torch.no_grad():
@@ -140,13 +177,10 @@ def valid(test_loader, net, angRes=5,n_GPUs=2):
 				sr_batch = SAI2MacPI(sr_batch,angRes)
 				sr_list.extend(sr_batch.chunk(n_GPUs, dim=0))
 
-
 			h, w = scale * h, scale * w
 			h_half, w_half = scale * h_half, scale * w_half
 			h_size, w_size = scale * h_size, scale * w_size
 		
-
-
 			outLF = data.new(b, c, h, w)
 			outLF[:, :, 0:h_half, 0:w_half] \
 				= sr_list[0][:, :, 0:h_half, 0:w_half]
@@ -157,44 +191,27 @@ def valid(test_loader, net, angRes=5,n_GPUs=2):
 			outLF[:, :, h_half:h, w_half:w] \
 				= sr_list[3][:, :, (h_size - h + h_half):h_size, (w_size - w + w_half):w_size]
 
-			# img_tmp = outLF.squeeze()
-			# imgplot = plt.imshow(img_tmp.cpu().numpy())
-			# plt.show()
-
 			outLF = MacPI2SAI(outLF,angRes)
-
-			# img_tmp = outLF.squeeze()
-			# imgplot = plt.imshow(img_tmp.cpu().numpy())
-			# plt.show()
-
-		else: 
-			with torch.no_grad():
-				outLF = net(data)
-
-		outLF = outLF.squeeze()
-
-		#covert SAI to 4DLF
-		outLF = SAI24DLF(outLF, cfg.angRes)
-		label = SAI24DLF(label, cfg.angRes)
+			outLF = outLF.squeeze()
 
 		psnr, ssim = cal_metrics(label, outLF, cfg.angRes)
-
 		psnr_iter_test.append(psnr)
 		ssim_iter_test.append(ssim)
-		pass
 
 	psnr_epoch_test = float(np.array(psnr_iter_test).mean())
 	ssim_epoch_test = float(np.array(ssim_iter_test).mean())
+
 
 	return psnr_epoch_test, ssim_epoch_test
 
 
 def save_ckpt(state, save_path='./log', filename='checkpoint.pth.tar'):
 	torch.save(state, os.path.join(save_path,filename))
+
 def weights_init_xavier(m):
-    classname = m.__class__.__name__
-    if classname.find('Conv2d') != -1:
-        torch.nn.init.xavier_normal_(m.weight.data)
+	classname = m.__class__.__name__
+	if classname.find('Conv2d') != -1:
+		torch.nn.init.xavier_normal_(m.weight.data)
 
 def main(cfg):
 	train_set = TrainSetLoader(dataset_dir=cfg.trainset_dir)
