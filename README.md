@@ -34,6 +34,8 @@ We use the processed data by [LF-DFnet](https://ieeexplore.ieee.org/stamp/stamp.
   python test_HLFSR.py --angRes 5 --upscale_factor 4 --channels 64  --crop_test_method 3 --model_path [pre-trained dir]
   
 [Important note]: For our HLFSR method, the performance is following “the larger image patch size is the better”. For example, if we keep the whole image as an input of our network (i.e., crop_test_method is fixed equal to 1), it can be achieved the best performance. This is because our proposed network components require an adequate size of an input image to better exploit the pixel correlations in a larger receptive field. To get the same performance as reported in our paper, we need to set the default crop_test_method equal to 3.
+
+<p align="center"> <img src="https://github.com/duongvinh/HLFSR-SSR/tree/main/Figs/CroppedImageMethods.png" width="95%"> </p>
   
 ### Visual Results
 * To merge the Y, Cb, Cr channels, run:
