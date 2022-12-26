@@ -6,7 +6,7 @@ close all;
 factor = 4;
 
 %%
-sourceDataPath = 'F:\1.Data\1.Vinh\2. Research\1. Research skku\5.LFSR\dataset\LF-DFnet_Datasets/';
+sourceDataPath = '../LF-DFnet_Datasets/';
 sourceDatasets = dir(sourceDataPath);
 sourceDatasets(1:2) = [];
 datasetsNum = length(sourceDatasets);
@@ -41,8 +41,6 @@ for DatasetIndex = 1 : datasetsNum
         LFgt_rgb = LFgt_rgb((11-angRes)/2:(9+angRes)/2, (11-angRes)/2:(9+angRes)/2, 1:H, 1:W, 1:3);        
         LFsr = zeros(size(LFgt_rgb)); 
         
-%         PSNR_MAT = zeros(angRes,angRes);
-%         SSIM_MAT = zeros(angRes,angRes);
         
         for u = 1 : angRes
             for v = 1 : angRes                
