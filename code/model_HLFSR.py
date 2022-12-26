@@ -1,17 +1,18 @@
 import torch
 import torch.nn as nn
-from common import * 
+from common import *
+from readH5 import *
+from utils import * 
 import torch.nn.functional as F
 
-class HLFSR(nn.Module):
-	def __init__(self, angRes, n_blocks, channels, upscale_factor):
-		super(HLFSR, self).__init__()
+class Net(nn.Module):
+	def __init__(self, angRes, channels, factor):
+		super(Net, self).__init__()
 		
+		n_blocks = 15
 		self.angRes = angRes
-		self.n_blocks = n_blocks
-		self.upscale_factor = upscale_factor
+		self.upscale_factor = factor
 	   
-		
 		self.HFEM_1 = HFEM(angRes, n_blocks, channels,first=True)
 		self.HFEM_2 = HFEM(angRes, n_blocks, channels,first=False)
 		self.HFEM_3 = HFEM(angRes, n_blocks, channels,first=False)
@@ -37,7 +38,6 @@ class HLFSR(nn.Module):
 		HFEM_3 = self.HFEM_3(HFEM_2)
 		HFEM_4 = self.HFEM_4(HFEM_3)
 		HFEM_5 = self.HFEM_5(HFEM_4)
-
 
 		#Reshaping
 		x_out = MacPI2SAI(HFEM_5,self.angRes)
@@ -181,7 +181,7 @@ class HFEM(nn.Module):
 
 
 if __name__ == "__main__":
-    net = HLFSR(5,5,64, 2).cuda()
+    net = Net(5,32, 2).cuda()
     from thop import profile
     input = torch.randn(1, 1, 160, 160).cuda()
     total = sum([param.nelement() for param in net.parameters()])
