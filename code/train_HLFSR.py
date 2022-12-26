@@ -31,7 +31,7 @@ def parse_args():
 	parser.add_argument('--n_steps', type=int, default=15, help='number of epochs to update learning rate')
 	parser.add_argument('--gamma', type=float, default=0.5, help='learning rate decaying factor')
 
-	parser.add_argument("--crop_test_method",type=int, default=2, help="cropped test method( 1- whole image| 2- cropped mxn patches | 3- cropped 4 patches")
+	parser.add_argument("--crop_test_method",type=int, default=3, help="cropped test method( 1- whole image| 2- cropped mxn patches | 3- cropped 4 patches")
 	parser.add_argument("--patchsize", type=int, default=64, help="crop into patches for validation")
 	parser.add_argument("--stride", type=int, default=32, help="stride for patch cropping")
 
