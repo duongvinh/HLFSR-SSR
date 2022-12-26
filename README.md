@@ -31,7 +31,7 @@ We use the processed data by [LF-DFnet](https://ieeexplore.ieee.org/stamp/stamp.
 ### Test
 * Run:
   ```python
-  python test_HLFSR.py
+  python test_HLFSR.py --angRes 5 --upscale_factor 4 --channels 64 --testset_dir [test data dir] --crop_test_method 3 --model_path [pre-trained dir]  --save_path [save path dir]
 ### Visual Results
 * To merge the Y, Cb, Cr channels, run:
   ```matlab
