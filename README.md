@@ -27,11 +27,12 @@ We use the processed data by [LF-DFnet](https://ieeexplore.ieee.org/stamp/stamp.
 ### Train
 * Run:
   ```python
-  python train_HLFSR.py 
+  python train_HLFSR.py  --angRes 5 --upscale_factor 4 --channels 64  --crop_test_method 3
 ### Test
 * Run:
   ```python
-  python test_HLFSR.py --angRes 5 --upscale_factor 4 --channels 64 --testset_dir [test data dir] --crop_test_method 3 --model_path [pre-trained dir]  --save_path [save path dir]
+  python test_HLFSR.py --angRes 5 --upscale_factor 4 --channels 64  --crop_test_method 3 --model_path [pre-trained dir]
+  
 ### Visual Results
 * To merge the Y, Cb, Cr channels, run:
   ```matlab
