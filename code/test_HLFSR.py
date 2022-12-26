@@ -2,43 +2,41 @@ import time
 import argparse
 import scipy.misc
 import torch.backends.cudnn as cudnn
-from utils import *
-
-from model_HLFSR import HLFSR
-from common import *
 from tqdm import tqdm
 import os
 from scipy import io
+
+from common import *
+from readH5 import *
+from utils import *
+
+from model_HLFSR import Net
+
 
 def parse_args():
 	parser = argparse.ArgumentParser()
 	parser.add_argument('--device', type=str, default='cuda:0')
 	parser.add_argument("--angRes", type=int, default=5, help="angular resolution")
 	parser.add_argument("--upscale_factor", type=int, default=4, help="upscale factor")
-	parser.add_argument('--testset_dir', type=str, default='F:/1.Data/1.Vinh/2. Research/1. Research skku/5.LFSR/4.HLFSR/Data_HLFSR/x4/TestData_4xSR_5x5/')
-
-	parser.add_argument("--patchsize", type=int, default=128, help="LFs are cropped into patches to save GPU memory")
-	parser.add_argument("--stride", type=int, default=64, help="The stride between two test patches is set to patchsize/2")
-
-	parser.add_argument('--model_path', type=str, default='./log/HLFSR_4xSR_5x5_epoch_49.pth.tar')
-	parser.add_argument('--save_path', type=str, default='../Results/')
-
-	parser.add_argument("--n_groups", type=int, default=5, help="number of HLFSR-Groups")
-	parser.add_argument("--n_blocks", type=int, default=15, help="number of HLFSR-Blocks")
 	parser.add_argument("--channels", type=int, default=32, help="number of channels")
-	parser.add_argument("--crop_test",type=bool, default=True)
+	parser.add_argument('--testset_dir', type=str, default='../x4/TestData_4xSR_5x5/')
+	parser.add_argument("--crop_test_method",type=int, default=3, help="cropped test method( 1- whole image| 2- cropped mxn patches | 3- cropped 4 patches")
+	parser.add_argument("--patchsize", type=int, default=64, help="LFs are cropped into patches to save GPU memory")
+	parser.add_argument("--stride", type=int, default=32, help="The stride between two test patches is set to patchsize/2")
+	parser.add_argument('--model_path', type=str, default='./log/HLFSR_4xSR_5x5_C32.pth.tar')
+	parser.add_argument('--save_path', type=str, default='../Results/')
 
 	return parser.parse_args()
 
 
 def test(cfg, test_Names, test_loaders):
 
-	net = HLFSR(angRes=cfg.angRes, n_blocks=cfg.n_blocks,
-				   channels=cfg.channels, upscale_factor=cfg.upscale_factor)
+	net = Net(angRes=cfg.angRes, channels=cfg.channels, factor=cfg.upscale_factor) # HLFSR
+
+	# net = Net(angRes=cfg.angRes, factor=cfg.upscale_factor) # DistgSSR 
+
 	net.to(cfg.device)
 	cudnn.benchmark = True
-
-	# net = torch.nn.DataParallel(net, device_ids=[0, 1])
 
 	# print(net)
 	total_params = sum(p.numel() for p in net.parameters())
@@ -51,27 +49,71 @@ def test(cfg, test_Names, test_loaders):
 		print("=> no model found at '{}'".format(cfg.load_model))
 
 	with torch.no_grad():
+		
 		psnr_testset = []
 		ssim_testset = []
+		time_testset = []
 		for index, test_name in enumerate(test_Names):
 			test_loader = test_loaders[index]
-			outLF, psnr_epoch_test, ssim_epoch_test = inference(test_loader, test_name, net,angRes=cfg.angRes)
+			outLF, psnr_epoch_test, ssim_epoch_test, time_total = inference(test_loader, test_name, net,angRes=cfg.angRes)
 			psnr_testset.append(psnr_epoch_test)
 			ssim_testset.append(ssim_epoch_test)
-			print(time.ctime()[4:-5] + ' Valid----%15s, PSNR---%f, SSIM---%f' % (test_name, psnr_epoch_test, ssim_epoch_test))
+			time_testset.append(time_total)
+			print(time.ctime()[4:-5] + ' Valid----%15s, PSNR---%f, SSIM---%f, Time---%f ' % (test_name, psnr_epoch_test, ssim_epoch_test,time_total))
 			pass
+			
+		psnr_mean_test = float(np.array(psnr_testset).mean())
+		ssim_mean_test = float(np.array(ssim_testset).mean())
+		time_testset = float(np.array(time_testset).mean())
+		print('The mean psnr on testsets is %.5f, mean ssim is %.5f, Time---%f' % (psnr_mean_test, ssim_mean_test,time_testset))
 		pass
 
 
-def inference(test_loader, test_name, net,angRes=5):
+def inference(test_loader, test_name, net,angRes=5,n_GPUs=1):
 	psnr_iter_test = []
 	ssim_iter_test = []
-	for idx_iter, (data, label) in (enumerate(test_loader)):
-		data = data.to(cfg.device)  # numU, numV, h*angRes, w*angRes
-		label = label.squeeze()
+	avg_time_test = []
 
-		b, c, h, w = data.size()
-		if cfg.crop_test:
+	for idx_iter, (data, label) in (enumerate(test_loader)):
+		time_test = 0
+		if cfg.crop_test_method == 1:
+			data = data.to(cfg.device)  # numU, numV, h*angRes, w*angRes
+			label = label.squeeze()
+			with torch.no_grad():
+				time_item_start = time.time()
+				outLF = net(data)
+				time_test += time.time() - time_item_start 
+			outLF = outLF.squeeze()
+
+		if cfg.crop_test_method == 2:
+			data = MacPI2SAI(data,cfg.angRes)
+			data = data.squeeze().to(cfg.device)  # numU, numV, h*angRes, w*angRes
+			label = label.squeeze()
+
+			uh, vw = data.shape
+			h0, w0 = uh // cfg.angRes, vw // cfg.angRes
+			subLFin = LFdivide(data, cfg.angRes, cfg.patchsize, cfg.stride)  # numU, numV, h*angRes, w*angRes
+			numU, numV, H, W = subLFin.shape
+			subLFout = torch.zeros(numU, numV, cfg.angRes * cfg.patchsize * cfg.upscale_factor, cfg.angRes * cfg.patchsize * cfg.upscale_factor)
+
+			for u in range(numU):
+				for v in range(numV):
+					tmp = subLFin[u, v, :, :].unsqueeze(0).unsqueeze(0)
+					tmp = SAI2MacPI(tmp,cfg.angRes)
+					with torch.no_grad():
+						time_item_start = time.time()
+						torch.cuda.empty_cache()
+						out = net(tmp.to(cfg.device))
+						time_test += time.time() - time_item_start 
+						subLFout[u, v, :, :] = out.squeeze()
+
+			outLF = LFintegrate(subLFout, cfg.angRes, cfg.patchsize * cfg.upscale_factor, cfg.stride * cfg.upscale_factor, h0 * cfg.upscale_factor, w0 * cfg.upscale_factor)
+
+		if cfg.crop_test_method == 3:
+			data = data.to(cfg.device)  # numU, numV, h*angRes, w*angRes
+			label = label.squeeze()
+
+			b, c, h, w = data.size()
 			scale  = cfg.upscale_factor
 			h_half, w_half = h // 2, w // 2
 			h_size, w_size = h_half , w_half 
@@ -84,11 +126,12 @@ def inference(test_loader, test_name, net,angRes=5):
 
 
 			sr_list = []
-			n_GPUs = 1
 			for i in range(0, 4, n_GPUs):
 				lr_batch = torch.cat(lr_list[i:(i + n_GPUs)], dim=0)
 				with torch.no_grad():
+					time_item_start = time.time()
 					sr_batch = net(lr_batch)
+					time_test += time.time() - time_item_start 
 				sr_batch = SAI2MacPI(sr_batch,angRes)
 				sr_list.extend(sr_batch.chunk(n_GPUs, dim=0))
 
@@ -97,8 +140,6 @@ def inference(test_loader, test_name, net,angRes=5):
 			h_half, w_half = scale * h_half, scale * w_half
 			h_size, w_size = scale * h_size, scale * w_size
 		
-
-
 			outLF = data.new(b, c, h, w)
 			outLF[:, :, 0:h_half, 0:w_half] \
 				= sr_list[0][:, :, 0:h_half, 0:w_half]
@@ -109,86 +150,28 @@ def inference(test_loader, test_name, net,angRes=5):
 			outLF[:, :, h_half:h, w_half:w] \
 				= sr_list[3][:, :, (h_size - h + h_half):h_size, (w_size - w + w_half):w_size]
 
-			# img_tmp = outLF.squeeze()
-			# imgplot = plt.imshow(img_tmp.cpu().numpy())
-			# plt.show()
-
 			outLF = MacPI2SAI(outLF,angRes)
-
-			# img_tmp = outLF.squeeze()
-			# imgplot = plt.imshow(img_tmp.cpu().numpy())
-			# plt.show()
-
-		else: 
-			with torch.no_grad():
-				outLF = net(data)
-
-		outLF = outLF.squeeze()
-
-		#covert SAI to 4DLF
-		outLF = SAI24DLF(outLF, cfg.angRes)
-		label = SAI24DLF(label, cfg.angRes)
+			outLF = outLF.squeeze()
 
 		psnr, ssim = cal_metrics(label, outLF, cfg.angRes)
 		psnr_iter_test.append(psnr)
 		ssim_iter_test.append(ssim)
+		avg_time_test.append(time_test)
 
 		isExists = os.path.exists(cfg.save_path + test_name)
 		if not (isExists ):
 			os.makedirs(cfg.save_path + test_name)
 
 		io.savemat(cfg.save_path + test_name + '/' + test_loader.dataset.file_list[idx_iter][0:-3] + '.mat',
-						{'LF': outLF.numpy()})
+						{'LF': outLF.cpu().numpy()})
 		pass
 
 
 	psnr_epoch_test = float(np.array(psnr_iter_test).mean())
 	ssim_epoch_test = float(np.array(ssim_iter_test).mean())
+	avg_time_test = float(np.array(avg_time_test).mean())
 
-	return outLF, psnr_epoch_test, ssim_epoch_test
-
-# def inference(test_loader, test_name, net,angRes=5):
-# 	psnr_iter_test = []
-# 	ssim_iter_test = []
-# 	for idx_iter, (data, label) in (enumerate(test_loader)):
-
-# 		data = MacPI2SAI(data,cfg.angRes)
-# 		data = data.squeeze().to(cfg.device)  # numU, numV, h*angRes, w*angRes
-# 		label = label.squeeze()
-
-# 		uh, vw = data.shape
-# 		h0, w0 = uh // cfg.angRes, vw // cfg.angRes
-# 		subLFin = LFdivide(data, cfg.angRes, cfg.patchsize, cfg.stride)  # numU, numV, h*angRes, w*angRes
-# 		numU, numV, H, W = subLFin.shape
-# 		subLFout = torch.zeros(numU, numV, cfg.angRes * cfg.patchsize * cfg.upscale_factor, cfg.angRes * cfg.patchsize * cfg.upscale_factor)
-
-# 		for u in range(numU):
-# 			for v in range(numV):
-# 				tmp = subLFin[u, v, :, :].unsqueeze(0).unsqueeze(0)
-# 				tmp = SAI2MacPI(tmp,cfg.angRes)
-# 				with torch.no_grad():
-# 					torch.cuda.empty_cache()
-# 					out = net(tmp.to(cfg.device))
-# 					subLFout[u, v, :, :] = out.squeeze()
-
-# 		outLF = LFintegrate(subLFout, cfg.angRes, cfg.patchsize * cfg.upscale_factor, cfg.stride * cfg.upscale_factor, h0 * cfg.upscale_factor, w0 * cfg.upscale_factor)
-
-# 		psnr, ssim = cal_metrics(label, outLF, cfg.angRes)
-# 		psnr_iter_test.append(psnr)
-# 		ssim_iter_test.append(ssim)
-
-# 		isExists = os.path.exists(cfg.save_path + test_name)
-# 		if not (isExists ):
-# 			os.makedirs(cfg.save_path + test_name)
-
-# 		io.savemat(cfg.save_path + test_name + '/' + test_loader.dataset.file_list[idx_iter][0:-3] + '.mat',
-# 						{'LF': outLF.numpy()})
-# 		pass
-
-# 	psnr_epoch_test = float(np.array(psnr_iter_test).mean())
-# 	ssim_epoch_test = float(np.array(ssim_iter_test).mean())
-
-# 	return outLF, psnr_epoch_test, ssim_epoch_test
+	return outLF, psnr_epoch_test, ssim_epoch_test,avg_time_test
 
 
 def main(cfg):
