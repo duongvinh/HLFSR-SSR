@@ -8,7 +8,7 @@ addpath(genpath('./Functions/'))
 angRes = 5; % Angular Resolution, options, e.g., 3, 5, 7, 9. Default: 5
 factor = 2; % SR factor, Default: 4
 downRatio = 1/factor;
-sourceDataPath = 'D:/Vinh/13.LFSR/dataset/LF-DFnet_Datasets/';
+sourceDataPath = '../LF-DFnet_Datasets/';
 sourceDatasets = dir(sourceDataPath);
 sourceDatasets(1:2) = [];
 datasetsNum = length(sourceDatasets);
@@ -44,8 +44,8 @@ for DatasetIndex = 1 : datasetsNum
         LF = LF(0.5*(U-angRes+2):0.5*(U+angRes), 0.5*(V-angRes+2):0.5*(V+angRes), 1:H, 1:W, 1:3); % Extract central angRes*angRes views
         [U, V, H, W, ~] = size(LF);
         
-        % data = single(zeros(U*H*downRatio, V*W*downRatio));
-		macroLF = single(zeros(U*H*downRatio, V*W*downRatio));
+        
+        data = single(zeros(U*H*downRatio, V*W*downRatio));
         label = single(zeros(U*H, V*W));
 
         for u = 1 : U
@@ -53,12 +53,12 @@ for DatasetIndex = 1 : datasetsNum
                 SAI_rgb = squeeze(LF(u, v, :, :, :));
                 SAI_ycbcr = rgb2ycbcr(double(SAI_rgb));
                 label((u-1)*H+1 : u*H, (v-1)*W+1 : v*W) = SAI_ycbcr(:, :, 1);   
-				macroLF(u:angRes:end, v:angRes:end) = imresize(SAI_ycbcr(:, :, 1), downRatio);
+		data(u:angRes:end, v:angRes:end) = imresize(SAI_ycbcr(:, :, 1), downRatio);
                 % data((u-1)*H*downRatio+1 : u*H*downRatio, (v-1)*W*downRatio+1 : v*W*downRatio) = imresize(SAI_ycbcr(:, :, 1), downRatio);
             end
         end
         
-		data = macroLF;
+
         SavePath_H5 = [SavePath, '/', sceneName, '.h5'];
         h5create(SavePath_H5, '/data', size(data), 'Datatype', 'single');
         h5write(SavePath_H5, '/data', single(data), [1,1], size(data));
