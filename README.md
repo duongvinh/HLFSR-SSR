@@ -29,7 +29,7 @@ We use the processed data by [LF-DFnet](https://ieeexplore.ieee.org/stamp/stamp.
 ### Train
 * Run:
   ```python
-  python train_HLFSR.py
+  python train_HLFSR.py 
 ### Test
 * Run:
   ```python
@@ -38,6 +38,7 @@ We use the processed data by [LF-DFnet](https://ieeexplore.ieee.org/stamp/stamp.
 * To merge the Y, Cb, Cr channels, run:
   ```matlab
   GenerateResultImages.m
+  
   
 ## Citation
 If you find this work helpful, please consider citing the following papers:<br> 
