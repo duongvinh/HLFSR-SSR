@@ -171,4 +171,20 @@ def SAI2MacPI(x, angRes):
 	out = torch.cat(tempU, dim=2)
 	return out
 
+def SAI24DLF(x, angRes):
+	
+	uh, vw = x.shape
+	h0, w0 = int(uh // angRes), int(vw // angRes)
 
+	LFout = torch.zeros(angRes, angRes, h0, w0)
+
+	for u in range(angRes):
+		start_u = u*h0
+		end_u = (u+1)*h0
+		for v in range(angRes):
+			start_v = v*w0
+			end_v = (v+1)*w0
+			img_tmp = x[start_u:end_u,start_v:end_v]
+			LFout[u, v, :, :] = img_tmp
+
+	return LFout
