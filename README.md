@@ -1,5 +1,5 @@
 # Light Field Image Super-Resolution Network Using via Spatial-Angular and Epipolar Information
-This repository contains official pytorch implementation of "Light Field Image Super-Resolution Network via Joint Spatio-Angular and Epipolar Information" submitted in IEEE Transactions on Computational Imaging 2022, by Vinh Van Duong, Thuc Nguyen Huu, Jonghoon Yim, and Byeungwoo Jeon.
+This repository contains official pytorch implementation of "Light Field Image Super-Resolution Network via Joint Spatio-Angular and Epipolar Information" in IEEE Transactions on Computational Imaging 2022, by Vinh Van Duong, Thuc Nguyen Huu, Jonghoon Yim, and Byeungwoo Jeon.
 
 ## News
 [2023-03-20]: Our paper has been accepted in TCI, the early access version of this paper will avaiable soon in IEEE Explore.
