@@ -2,6 +2,8 @@
 This repository contains official pytorch implementation of "Light Field Image Super-Resolution Network via Joint Spatio-Angular and Epipolar Information" submitted in IEEE Transactions on Computational Imaging 2022, by Vinh Van Duong, Thuc Nguyen Huu, Jonghoon Yim, and Byeungwoo Jeon.
 
 ## News
+[2023-03-20]: Our paper has been accepted in TCI, the early access version of this will avaiable soon in IEEE Explore.
+
 [2023-01-16]: we added the "SAI24DLF" function into the "common.py" file.
 
 [2022-12-26]: we have updated the pre-trained models and codes.
