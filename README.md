@@ -1,4 +1,4 @@
-# Light Field Image Super-Resolution Network via Joint Spatio-Angular and Epipolar Information [TCI](https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=10081009)
+# Light Field Image Super-Resolution Network via Joint Spatio-Angular and Epipolar Information [TCI-2023](https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=10081009)
 This repository contains official pytorch implementation of "Light Field Image Super-Resolution Network via Joint Spatio-Angular and Epipolar Information" in IEEE Transactions on Computational Imaging 2022, by Vinh Van Duong, Thuc Nguyen Huu, Jonghoon Yim, and Byeungwoo Jeon.
 
 ## News
