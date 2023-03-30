@@ -50,12 +50,11 @@ We use the processed data by [LF-DFnet](https://ieeexplore.ieee.org/stamp/stamp.
 ## Citation
 If you find this work helpful, please consider citing the following papers:<br> 
 ```Citation
-@article{
-  title={Light Field Super-Resolution Network Using Joint Spatio-Angular and Epipolar Information},
-  author={Vinh Van Duong, Thuc Nguyen Huu, Jonghoon Yim, and Byeungwoo Jeon},
-  journal={submitted to IEEE Transactions on Computational Imaging},
-  year={2022},
-  publisher={IEEE}
+@Article{vinh2023-lfsr,
+  author  = {Duong, V. V. and Nguyen, T. H. and Yim, J. and Jeon, B.},
+  journal = {IEEE Trans. Compuational Imaging},
+  title   = {Light Field Image Super-Resolution Network via Joint Spatial-Angular and Epipolar Information},
+  year    = {2023},
 }
 ```
 ```Citation
