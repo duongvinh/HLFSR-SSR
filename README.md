@@ -86,9 +86,4 @@ We sincerely thank the authors for sharing their code and amazing research work!
 ## Contact
 if you have any question, please contact me through email duongvinh@skku.edu
 
-<details> 
-<summary>visitors</summary>
 
-![views](https://visitor-badge.glitch.me/badge?page_id=duongvinh/HLFSR-SSR)
-
-</details> 
